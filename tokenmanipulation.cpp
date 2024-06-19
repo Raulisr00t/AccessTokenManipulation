@@ -9,6 +9,21 @@
 
 using namespace std;
 
+bool IsUserAdmin() {
+    BOOL b;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    PSID AdminGroups;
+    b = AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &AdminGroups);
+
+    if (b) {
+        if (!CheckTokenMembership(NULL, AdminGroups, &b)){
+            b = FALSE;
+        }
+        FreeSid(AdminGroups);
+    }
+    return b != 0;
+}
+
 DWORD GetProcessID(LPCTSTR processName) {
     DWORD pid = 0;
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -62,6 +77,18 @@ void EnablePrivileges(HANDLE hToken, LPCTSTR lpszPrivilege, BOOL bEnablePrivileg
 
 int main() {
 #ifdef _WIN32
+    if (!IsUserAdmin()) {
+        if (ShellExecute(NULL, L"runas", L"tokenmanipulation.exe", NULL, NULL, SW_SHOWNORMAL)){
+            return EXIT_SUCCESS;
+        }
+        else {
+            return EXIT_FAILURE;
+            exit(0);
+        }
+    }
+    else {
+        cout << "[+] Program Starts with Admin Privilages" << endl;
+    }
 
     const TCHAR* processName = _T("winlogon.exe");
     DWORD pid_impersonate;
